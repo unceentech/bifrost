@@ -20,6 +20,7 @@
   - [Response Struct](#response-struct)
   - [Interceptors](#interceptors)
     - [Multiple Interceptors](#multiple-interceptors)
+  - [Contribution](#contribution)
 
 
 ## Features
@@ -167,3 +168,7 @@ The response for a request contains the following information.
   Bytes []byte,
 }
 ```
+
+## Contribution
+
+Contributions are welcome. If you find any improvement or issue you want to fix feel free to send a pull request [pull request](https://github.com/unceentech/bifrost/pulls) or open an [issue](https://github.com/unceentech/bifrost/issues) to discuss the change you wish to make.
