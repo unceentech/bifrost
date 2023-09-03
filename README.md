@@ -55,7 +55,8 @@ func main() {
         log.Fatalf("err: %v", err)
     }
 
-    fmt.Printf("Http Response: ", res)
+    fmt.Printf("HTTP StatusCode: ", res.Status)
+    fmt.Printf("Http Response: ", res.Data)
 }
 ```
 
