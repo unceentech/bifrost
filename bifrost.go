@@ -1,8 +1,9 @@
 package bifrost
 
 import (
+	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -55,7 +56,7 @@ If a BaseUrl is provided, it will be prepended to the Url provided in the Get me
 This method also sets the content header to application/json.
   - @param {string} The request Url
   - @param { interface{} or nil } ResponseStruct for Unmarshalling the response body.
-  - @return { interface{}, error } The response
+  - @return { BifrostResponse, error } The response
 */
 func (bi *Bifrost) Get(Url string, ResponseStruct interface{}) (BifrostResponse, error) {
 
@@ -65,6 +66,7 @@ func (bi *Bifrost) Get(Url string, ResponseStruct interface{}) (BifrostResponse,
 		return BifrostResponse{}, err
 	}
 
+	// Start a new HTTP request
 	request, requestErr := http.NewRequest("GET", url, nil)
 	if requestErr != nil {
 		return BifrostResponse{}, requestErr
@@ -95,7 +97,7 @@ func (bi *Bifrost) Get(Url string, ResponseStruct interface{}) (BifrostResponse,
 	defer response.Body.Close()
 
 	// Get the data in the response body
-	responseByte, readErr := ioutil.ReadAll(response.Body)
+	responseByte, readErr := io.ReadAll(response.Body)
 	if readErr != nil {
 		return BifrostResponse{}, readErr
 	}
@@ -112,18 +114,95 @@ func (bi *Bifrost) Get(Url string, ResponseStruct interface{}) (BifrostResponse,
 	json.Unmarshal(responseByte, &EmptyResponse)
 
 	return BifrostResponse{
-		Status: response.StatusCode,
+		Status:     response.StatusCode,
 		StatusText: response.Status,
-		Data: EmptyResponse,
-		Response: response,
-		Bytes: responseByte,
+		Data:       EmptyResponse,
+		Response:   response,
+		Bytes:      responseByte,
 	}, nil
 }
 
-// func (bi *Bifrost) Post(Url string, Body interface{}, Config *BifrostConfig) (*http.Response, error) {
-// 	url, err := bi.validateUrl(Url)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+/*
+Post receives a string Url, interface{} Body, and an optional Struct
+If a BaseUrl is provided, it will be prepended to the Url provided in the Get method.
+This method also sets the content header to application/json.
+  - @param {string} The request Url
+  - @param {interface{} } The request Body
+  - @param { interface{} or nil } ResponseStruct for Unmarshalling the response body.
+  - @return { BifrostResponse, error } The response
+*/
+func (bi *Bifrost) Post(Url string, Body interface{}, ResponseStruct interface{}) (BifrostResponse, error) {
+	// Validate the Url, check if baseUrl is provided
+	url, err := bi.validateUrl(Url)
+	if err != nil {
+		return BifrostResponse{}, err
+	}
 
-// }
+	// Start a new HTTP request
+	request, requestErr := http.NewRequest("POST", url, nil)
+	if requestErr != nil {
+		return BifrostResponse{}, requestErr
+	}
+
+	// Check if request body was provided
+	if Body != nil {
+		// Parse the Request body
+		requestBodyByte, err := json.Marshal(Body)
+		if err != nil {
+			return BifrostResponse{}, err
+		}
+
+		reqBody := io.NopCloser(bytes.NewReader(requestBodyByte))
+		request.Body = reqBody
+	}
+
+	// Check if a timeout was specified else use the default timeout
+	var timeoutValue time.Duration
+	if bi.Timeout != 0 {
+		timeoutValue = bi.Timeout
+	} else {
+		timeoutValue = time.Second * 10
+	}
+
+	httpclient := &http.Client{
+		Timeout: timeoutValue,
+	}
+
+	// Check if the Bifrost Config was set
+	bi.checkBifrostConfig(request)
+
+	// Send the request and get the response from the request
+	response, err := httpclient.Do(request)
+	if err != nil {
+		return BifrostResponse{}, err
+	}
+
+	// Call the close function at the end of this function
+	defer response.Body.Close()
+
+	// Get the data in the response body
+	responseByte, readErr := io.ReadAll(response.Body)
+	if readErr != nil {
+		return BifrostResponse{}, readErr
+	}
+
+	// Declare an empty response, make it an empty interface since we don't konw the type of the response.
+	var EmptyResponse interface{}
+
+	// Check if a struct was passed, and use that
+	if ResponseStruct != nil {
+		EmptyResponse = ResponseStruct
+	}
+
+	// Parse the JSON response into the empty interface created.
+	json.Unmarshal(responseByte, &EmptyResponse)
+
+	return BifrostResponse{
+		Status:     response.StatusCode,
+		StatusText: response.Status,
+		Data:       EmptyResponse,
+		Response:   response,
+		Bytes:      responseByte,
+	}, nil
+
+}
