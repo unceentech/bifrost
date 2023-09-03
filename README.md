@@ -50,7 +50,7 @@ import (
 
 func main() {
     bi := bifrost.NewClient()
-    res, err := bi.Get("https://api-eticketeer.onrender.com/api/v1/event/get", nil)
+    res, err := bi.Get("https://some-domain.com/api/v1/event/get", nil)
     if err != nil {
         log.Fatalf("err: %v", err)
     }
