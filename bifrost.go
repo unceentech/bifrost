@@ -57,17 +57,17 @@ This method also sets the content header to application/json.
   - @param { interface{} or nil } ResponseStruct for Unmarshalling the response body.
   - @return { interface{}, error } The response
 */
-func (bi *Bifrost) Get(Url string, ResponseStruct interface{}) (interface{}, error) {
+func (bi *Bifrost) Get(Url string, ResponseStruct interface{}) (BifrostResponse, error) {
 
 	// Validate the Url, check if baseUrl is provided
 	url, err := bi.validateUrl(Url)
 	if err != nil {
-		return nil, err
+		return BifrostResponse{}, err
 	}
 
 	request, requestErr := http.NewRequest("GET", url, nil)
 	if requestErr != nil {
-		return nil, requestErr
+		return BifrostResponse{}, requestErr
 	}
 
 	// Check if a timeout was specified else use the default timeout
@@ -88,35 +88,36 @@ func (bi *Bifrost) Get(Url string, ResponseStruct interface{}) (interface{}, err
 	// Send the request and get the response from the request
 	response, err := httpclient.Do(request)
 	if err != nil {
-		return nil, err
+		return BifrostResponse{}, err
 	}
 
 	// Call the close function at the end of this function
 	defer response.Body.Close()
 
 	// Get the data in the response body
-	data, readErr := ioutil.ReadAll(response.Body)
+	responseByte, readErr := ioutil.ReadAll(response.Body)
 	if readErr != nil {
-		return nil, readErr
+		return BifrostResponse{}, readErr
 	}
 
 	// Declare an empty response, make it an empty interface since we don't konw the type of the response.
-	var BifrostResponse interface{}
+	var EmptyResponse interface{}
 
 	// Check if a struct was passed, and use that
 	if ResponseStruct != nil {
-		BifrostResponse = ResponseStruct
+		EmptyResponse = ResponseStruct
 	}
 
 	// Parse the JSON response into the empty interface created.
-	json.Unmarshal(data, &BifrostResponse)
+	json.Unmarshal(responseByte, &EmptyResponse)
 
-	// TODO: Return the following:
-	// - status code
-	// - error
-	// - BifrostResponse
-	// - The unfiltered *http.Respons object
-	return BifrostResponse, nil
+	return BifrostResponse{
+		Status: response.StatusCode,
+		StatusText: response.Status,
+		Data: EmptyResponse,
+		Response: response,
+		Bytes: responseByte,
+	}, nil
 }
 
 // func (bi *Bifrost) Post(Url string, Body interface{}, Config *BifrostConfig) (*http.Response, error) {
